@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cosmo Comics</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Bebas+Neue&family=Oswald:wght@400;700&family=Permanent+Marker&family=Rajdhani:wght@400;700&family=Roboto+Condensed:wght@400;700&family=Orbitron:wght@400;700&family=Exo+2:wght@400;700&family=Press+Start+2P&family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@400;700&family=Anton&family=Chakra+Petch:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- ════════════════════════════════════════════════════════
+     FIREBASE  ─  paste your config here
+     1. https://console.firebase.google.com
+     2. New Project → Add Web App → copy firebaseConfig
+     3. Firestore Database → Create (test mode)
+     ════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "PASTE_YOUR_API_KEY",
+  authDomain:        "PASTE_YOUR_AUTH_DOMAIN",
+  projectId:         "PASTE_YOUR_PROJECT_ID",
+  storageBucket:     "PASTE_YOUR_STORAGE_BUCKET",
+  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
+  appId:             "PASTE_YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+window._db = db;
+window._fb = { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc };
+window.dispatchEvent(new Event("firebaseReady"));
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+:root{
+  --bg:#0b2a4a;--accent:#ff7a00;--text:#ffffff;
+  --card:#0f355e;--nav-bg:#1a1a1a;--header-bg:#111111;--footer-bg:#0a0a0a;
+  --font-heading:'Bangers',cursive;--font-body:'Rajdhani',sans-serif;
+  --card-radius:10px;--layout-cols:4;
+}
+*{box-sizing:border-box;}
+body{font-family:var(--font-body);margin:0;background:var(--bg);color:var(--text);}
+
+/* BG patterns */
+body.bg-dots{background-image:radial-gradient(var(--accent)1px,transparent 1px),radial-gradient(var(--bg)1px,transparent 1px);background-size:12px 12px,12px 12px;background-position:0 0,6px 6px;}
+body.bg-stripes{background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,122,0,.07)10px,rgba(255,122,0,.07)20px);}
+body.bg-grid{background-image:linear-gradient(rgba(255,122,0,.08)1px,transparent 1px),linear-gradient(90deg,rgba(255,122,0,.08)1px,transparent 1px);background-size:30px 30px;}
+body.bg-solid{background-image:none;}
+body.bg-gradient{background:linear-gradient(135deg,var(--bg)0%,#0d1b2a 100%);}
+
+/* Header */
+header{padding:30px 20px;text-align:center;border-bottom:4px solid var(--accent);background:var(--header-bg);transition:all .3s;}
+header.style-left{text-align:left;padding-left:40px;}
+header.style-banner{background:linear-gradient(135deg,var(--header-bg),var(--accent)22);padding:50px 20px;}
+header.style-minimal{padding:16px 20px;border-bottom:2px solid var(--accent);}
+header.style-split{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;}
+header img{max-width:220px;display:block;margin:0 auto 10px;filter:drop-shadow(0 0 10px rgba(0,0,0,.7));transition:max-width .3s;}
+header.style-split img{margin:0;}
+header.style-minimal img{max-width:120px;margin-bottom:6px;}
+header h1{margin:0;font-size:34px;color:var(--accent);font-family:var(--font-heading);letter-spacing:2px;}
+header p{margin:5px 0 0;color:#ccc;}
+
+nav{background:var(--nav-bg);padding:12px;text-align:center;}
+nav button{margin:5px;padding:8px 14px;border:none;border-radius:6px;background:var(--accent);color:#000;font-weight:bold;cursor:pointer;}
+
+.container{max-width:1200px;margin:auto;padding:25px;}
+.grid{display:grid;gap:20px;grid-template-columns:repeat(var(--layout-cols),minmax(0,1fr));}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:500px){.grid{grid-template-columns:1fr;}}
+
+.card{background:var(--card);border-radius:var(--card-radius);padding:14px;box-shadow:0 4px 10px rgba(0,0,0,.5);transition:.2s;}
+.card:hover{transform:translateY(-5px);}
+.card h3{font-family:var(--font-heading);letter-spacing:1px;margin:8px 0 4px;}
+.card img{width:100%;height:260px;object-fit:cover;border-radius:6px;}
+.card.style-compact img{height:180px;}
+.card.style-large img{height:360px;}
+.card.style-minimal{background:transparent;border:1px solid var(--accent)33;box-shadow:none;}
+.card.style-magazine{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;}
+.card.style-magazine img{width:100px;height:140px;}
+.price{font-weight:bold;margin-top:6px;color:var(--accent);}
+.stock{font-size:12px;margin-top:4px;}
+button.buy{background:var(--accent);color:#000;border:none;padding:8px 10px;border-radius:5px;margin-top:6px;cursor:pointer;font-weight:bold;}
+
+/* Cart */
+.cart{position:fixed;top:20px;right:20px;background:#fff;color:#000;padding:15px;border-radius:10px;width:270px;max-height:80vh;overflow:auto;z-index:500;}
+.cart h3{margin:0 0 10px;}
+
+#sinpeSection{display:none;margin-top:12px;background:#f0f4ff;border-radius:8px;padding:12px;text-align:center;}
+#sinpeSection strong{font-size:14px;}
+#sinpePhone{font-size:16px;font-weight:bold;color:#333;display:block;margin:4px 0;}
+#sinpeQRCode{display:inline-block;margin:8px auto;}
+.sinpe-sms-btn{display:inline-block;margin-top:8px;padding:10px 18px;background:#ff7a00;color:#fff;font-weight:bold;border-radius:8px;text-decoration:none;font-size:14px;}
+#sinpeNote{font-size:10px;color:#777;margin-top:6px;}
+
+.featured{background:#1a1a1a;padding:20px;border-radius:10px;margin-bottom:25px;}
+.featured h2{font-family:var(--font-heading);letter-spacing:2px;}
+
+footer{background:var(--footer-bg);margin-top:40px;color:#aaa;border-top:3px solid var(--accent);}
+.footer-main{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:30px;max-width:1200px;margin:auto;padding:40px 25px 20px;}
+.footer-col h4{color:var(--accent);margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:1px;font-family:var(--font-heading);}
+.footer-col p{margin:0 0 8px;font-size:14px;line-height:1.6;}
+.contact-item{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;}
+.contact-item a{color:#ccc;text-decoration:none;}
+.contact-item a:hover{color:var(--accent);}
+.footer-bottom{background:#050505;text-align:center;padding:15px;font-size:13px;border-top:1px solid #222;}
+
+.mailing-section{background:#111;padding:30px 20px;text-align:center;border-top:2px solid #222;border-bottom:2px solid #222;}
+.mailing-section h3{color:var(--accent);margin:0 0 8px;font-size:20px;font-family:var(--font-heading);}
+.mailing-section p{color:#ccc;margin:0 0 15px;font-size:14px;}
+.mailing-form{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.mailing-form input{padding:10px 16px;border-radius:6px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:14px;width:260px;}
+.mailing-form button{padding:10px 20px;background:var(--accent);color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;}
+#mailingMsg{margin-top:10px;font-size:13px;color:lightgreen;min-height:18px;}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;justify-content:center;align-items:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#0f1f35;border:2px solid var(--accent);border-radius:12px;padding:30px;max-width:520px;width:90%;position:relative;color:#ddd;}
+.modal-box h2{color:var(--accent);margin:0 0 14px;font-family:var(--font-heading);}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;}
+
+/* ── ADMIN ─────────────────────────────────────────────── */
+#adminPanel{background:#111;padding:20px;margin:30px auto;max-width:980px;border:2px solid var(--accent);border-radius:10px;}
+#adminToolbar{position:sticky;top:0;z-index:999;background:#1a1a1a;border-bottom:3px solid var(--accent);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+#adminToolbar .lbl{font-weight:bold;color:var(--accent);font-size:15px;}
+#btnSave{padding:8px 18px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;background:#28a745;color:#fff;}
+#btnLogout{padding:8px 18px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;background:#dc3545;color:#fff;}
+#saveMsg{font-size:13px;color:lightgreen;}
+
+.atabs{display:flex;gap:4px;flex-wrap:wrap;margin:16px 0 0;}
+.atab{padding:8px 16px;background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;font-weight:bold;transition:.15s;}
+.atab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.asec{display:none;padding:20px 0;}
+.asec.active{display:block;}
+
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.agrid input,.agrid select,.agrid textarea{padding:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;}
+.agrid input[type=color]{padding:2px;height:36px;cursor:pointer;}
+.albl{font-size:11px;color:#888;margin-bottom:3px;display:block;}
+.arow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+.arow input,.arow select{flex:1;padding:7px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;}
+.arow button{padding:7px 14px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;}
+.itbl{width:100%;border-collapse:collapse;margin-top:10px;}
+.itbl td,.itbl th{border:1px solid #333;padding:6px;font-size:13px;}
+
+/* Setup banner */
+#setupBanner{background:#1a1a00;border:2px solid #ffd700;border-radius:8px;padding:14px;margin:0 20px 16px;color:#ffe;}
+#setupBanner h3{margin:0 0 8px;color:#ffd700;font-size:15px;}
+#setupBanner a{color:#ffd700;}
+#setupBanner code{background:#000;padding:1px 5px;border-radius:3px;font-size:11px;}
+
+/* ── DESIGN EDITOR ────────────────────────────────────── */
+.deditor{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:700px){.deditor{grid-template-columns:1fr;}}
+.dblock{background:#0d1e33;border:1px solid #1e3a5a;border-radius:10px;padding:16px;}
+.dblock h4{color:var(--accent);margin:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-family:var(--font-heading);border-bottom:1px solid #1e3a5a;padding-bottom:7px;}
+
+.crow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.csw label{font-size:10px;color:#888;display:block;margin-bottom:3px;text-align:center;}
+.csw input[type=color]{width:100%;height:38px;border:none;border-radius:6px;cursor:pointer;padding:2px;}
+
+.tpills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.tpill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:bold;border:2px solid transparent;background:#111;color:#ccc;transition:.15s;}
+.tpill:hover,.tpill.active{border-color:var(--accent);}
+.tdot{width:10px;height:10px;border-radius:50%;}
+
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.fopt{padding:8px 6px;background:#111;border:2px solid #333;border-radius:7px;cursor:pointer;text-align:center;transition:.15s;}
+.fopt:hover{border-color:var(--accent)66;}
+.fopt.active{border-color:var(--accent);}
+.fopt .fp{font-size:17px;margin-bottom:2px;}
+.fopt .fn{font-size:9px;color:#888;}
+
+.bggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.bgopt{height:50px;border-radius:7px;cursor:pointer;border:2px solid #333;transition:.15s;display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa;}
+.bgopt:hover{border-color:var(--accent)66;}
+.bgopt.active{border-color:var(--accent);}
+
+.csgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.csopt{padding:9px 5px;background:#111;border:2px solid #333;border-radius:7px;cursor:pointer;text-align:center;font-size:10px;color:#aaa;transition:.15s;}
+.csopt:hover{border-color:var(--accent)66;}
+.csopt.active{border-color:var(--accent);color:var(--accent);}
+.csopt .ico{font-size:18px;display:block;margin-bottom:3px;}
+
+.logrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.loopt{padding:9px 5px;background:#111;border:2px solid #333;border-radius:7px;cursor:pointer;text-align:center;font-size:10px;color:#aaa;transition:.15s;}
+.loopt:hover{border-color:var(--accent)66;}
+.loopt.active{border-color:var(--accent);color:var(--accent);}
+
+.hsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.hsopt{padding:9px 5px;background:#111;border:2px solid #333;border-radius:7px;cursor:pointer;text-align:center;font-size:10px;color:#aaa;transition:.15s;}
+.hsopt:hover{border-color:var(--accent)66;}
+.hsopt.active{border-color:var(--accent);color:var(--accent);}
+
+.srow{display:flex;gap:8px;align-items:center;}
+.srow input[type=range]{flex:1;}
+.sval{width:36px;text-align:right;font-size:12px;color:var(--accent);}
+
+.logodrop{border:2px dashed #333;border-radius:9px;padding:14px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:8px;}
+.logodrop:hover{border-color:var(--accent);}
+.logodrop img{max-width:150px;max-height:65px;object-fit:contain;display:block;margin:0 auto 5px;}
+.logodrop .hint{font-size:10px;color:#888;}
+
+.livebadge{display:inline-block;background:#28a745;color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:7px;vertical-align:middle;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* SINPE config */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.sbopt{padding:10px 8px;background:#111;border:2px solid #333;border-radius:8px;cursor:pointer;text-align:center;font-size:11px;color:#aaa;transition:.15s;line-height:1.5;}
+.sbopt:hover{border-color:var(--accent)66;}
+.sbopt.active{border-color:var(--accent);color:var(--accent);}
+
+/* Loading */
+#loadingOverlay{position:fixed;inset:0;background:#0b2a4aee;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+#loadingOverlay .sp{width:48px;height:48px;border:4px solid #ff7a0044;border-top-color:#ff7a00;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingOverlay p{color:#ccc;}
+
+@media(max-width:700px){
+  .cart{position:static;width:90%;margin:auto;margin-bottom:20px;}
+  header img{max-width:140px;}
+}
+</style>
+</head>
+<body class="bg-dots">
+
+<div id="loadingOverlay"><div class="sp"></div><p>Loading Cosmo Comics…</p></div>
+
+<header id="siteHeader" class="style-centered">
+  <img id="logo" src="https://via.placeholder.com/220x60/ff7a00/000000?text=COSMO+COMICS" alt="Logo">
+  <div class="header-text">
+    <h1 id="siteTitle">Cosmo Comics</h1>
+    <p id="tagline">Marvel • DC • Manga • Collectibles</p>
+  </div>
+</header>
+
+<nav id="navMenu"></nav>
+
+<div class="cart">
+  <h3>🛒 Cart</h3>
+  <ul id="cart-items" style="padding:0;list-style:none;margin:0;font-size:13px;"></ul>
+  <p style="margin:8px 0;"><strong>Total: ₡<span id="total">0</span></strong></p>
+  <div id="sinpeSection">
+    <strong>Pay with SINPE Móvil</strong>
+    <span id="sinpePhone"></span>
+    <div id="sinpeQRCode"></div>
+    <a id="sinpeSmsLink" class="sinpe-sms-btn" href="#">📱 Pay via SMS</a>
+    <p id="sinpeNote">Scan QR or tap button — opens your bank's SMS pre-filled.<br>Limit ₡100,000/day via SMS.</p>
+  </div>
+</div>
+
+<section class="container featured">
+  <h2>⭐ Featured Weekly Comics</h2>
+  <p>Editor's picks from Cosmo Comics this week.</p>
+</section>
+
+<section class="container">
+  <div class="grid" id="productGrid"></div>
+</section>
+
+<!-- ADMIN -->
+<div id="adminPanel" style="display:none;">
+  <h2 style="color:var(--accent);font-family:var(--font-heading);padding:0 20px 10px;">Admin Panel</h2>
+
+  <div id="setupBanner">
+    <h3>⚙️ One-Time Firebase Setup (for cross-device data)</h3>
+    <p>Open this file in a text editor → find <code>PASTE_YOUR_API_KEY</code> at the top → replace the entire <code>firebaseConfig</code> block with yours from <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a>.<br>
+    Enable <strong>Firestore Database</strong> (test mode). Done — all data will now persist across devices and browsers.</p>
+    <p style="font-size:12px;color:#bba;">Until then, data is saved only in this browser (localStorage).</p>
+  </div>
+
+  <div style="padding:0 20px 14px;">
+    Password: <input type="password" id="adminPass" style="padding:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;margin-right:8px;">
+    <button onclick="loginAdmin()" style="padding:7px 16px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">Login</button>
+  </div>
+
+  <div id="adminContent" style="display:none;">
+    <div id="adminToolbar">
+      <span class="lbl">🛠 Admin Panel</span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span id="saveMsg"></span>
+        <button id="btnSave" onclick="saveAll()">💾 Save Changes</button>
+        <button id="btnLogout" onclick="logoutAdmin()">🚪 Log Out</button>
+      </div>
+    </div>
+
+    <div style="padding:0 20px;">
+      <div class="atabs">
+        <div class="atab active" onclick="switchTab('inventory',this)">📦 Inventory</div>
+        <div class="atab" onclick="switchTab('design',this)">🎨 Design</div>
+        <div class="atab" onclick="switchTab('content',this)">✏️ Content</div>
+        <div class="atab" onclick="switchTab('sinpe',this)">💳 SINPE</div>
+        <div class="atab" onclick="switchTab('settings',this)">⚙️ Settings</div>
+        <div class="atab" onclick="switchTab('marketing',this)">📬 Marketing</div>
+      </div>
+    </div>
+
+    <!-- ════ INVENTORY ════ -->
+    <div id="tab-inventory" class="asec active" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Add Comic</h3>
+      <div class="agrid">
+        <div><label class="albl">Name</label><input id="comicName" placeholder="Spider-Man"></div>
+        <div><label class="albl">Issue #</label><input id="comicIssue" placeholder="#1"></div>
+        <div><label class="albl">Category</label><select id="comicCatSel" style="width:100%;padding:6px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;"></select></div>
+        <div><label class="albl">Price (₡)</label><input id="comicPrice" type="number" placeholder="1200"></div>
+        <div><label class="albl">Stock</label><input id="comicStock" type="number" placeholder="5"></div>
+        <div><label class="albl">Cover Image</label><input type="file" id="comicImage" accept="image/*"></div>
+      </div>
+      <button onclick="addComic()" style="padding:8px 20px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;margin-bottom:20px;">+ Add Comic</button>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Inventory</h3>
+      <input placeholder="🔍 Search…" oninput="adminSearch(this.value)" style="width:100%;padding:8px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:6px;margin-bottom:10px;">
+      <div style="overflow-x:auto;"><table class="itbl" id="inventoryTable"></table></div>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);margin-top:22px;">Categories</h3>
+      <div class="arow"><input id="newCategory" placeholder="New category"><button onclick="addCategory()">+ Add</button></div>
+      <div class="arow">
+        <select id="removeCatSel" style="flex:1;padding:7px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;"></select>
+        <button onclick="removeCategory()" style="background:#dc3545;color:#fff;">Remove</button>
+      </div>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);margin-top:22px;">Sales</h3>
+      <p>Orders: <strong id="ordersCount">0</strong> | Revenue: ₡<strong id="revenueValue">0</strong></p>
+    </div>
+
+    <!-- ════ DESIGN ════ -->
+    <div id="tab-design" class="asec" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Visual Design Editor <span class="livebadge">LIVE</span></h3>
+      <p style="color:#888;font-size:12px;margin:-8px 0 16px;">Changes apply instantly. Press 💾 Save Changes to keep them.</p>
+
+      <div class="deditor">
+        <!-- Colors -->
+        <div class="dblock">
+          <h4>🎨 Colors</h4>
+          <label class="albl" style="margin-bottom:8px;">Quick Themes</label>
+          <div class="tpills" id="themePresets"></div>
+          <div class="crow">
+            <div class="csw"><label>Background</label><input type="color" id="cBg" oninput="liveColor('colorBg',this.value)"></div>
+            <div class="csw"><label>Accent</label><input type="color" id="cAccent" oninput="liveColor('colorAccent',this.value)"></div>
+            <div class="csw"><label>Card BG</label><input type="color" id="cCard" oninput="liveColor('colorCard',this.value)"></div>
+            <div class="csw"><label>Text</label><input type="color" id="cText" oninput="liveColor('colorText',this.value)"></div>
+            <div class="csw"><label>Header</label><input type="color" id="cHeader" oninput="liveColor('colorHeader',this.value)"></div>
+            <div class="csw"><label>Nav</label><input type="color" id="cNav" oninput="liveColor('colorNav',this.value)"></div>
+          </div>
+        </div>
+
+        <!-- Logo -->
+        <div class="dblock">
+          <h4>🖼️ Logo</h4>
+          <div class="logodrop" onclick="document.getElementById('logoUpload').click()">
+            <img id="logoPreview" src="https://via.placeholder.com/150x55/ff7a00/000000?text=COSMO" alt="preview">
+            <div class="hint">Click to upload (PNG / JPG / SVG)</div>
+          </div>
+          <input type="file" id="logoUpload" accept="image/*" style="display:none" onchange="uploadLogo(this)">
+          <button onclick="removeLogo()" style="background:#444;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-bottom:10px;">✕ Remove logo</button>
+          <label class="albl">Logo Width</label>
+          <div class="srow"><input type="range" min="80" max="400" id="logoSize" oninput="liveLogoSize(this.value)"><span class="sval" id="logoSizeVal">220px</span></div>
+        </div>
+
+        <!-- Typography -->
+        <div class="dblock" style="grid-column:1/-1;">
+          <h4>🔤 Typography</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+            <div><label class="albl" style="margin-bottom:7px;">Heading Font</label><div class="fgrid" id="headingFontPicker"></div></div>
+            <div><label class="albl" style="margin-bottom:7px;">Body Font</label><div class="fgrid" id="bodyFontPicker"></div></div>
+          </div>
+        </div>
+
+        <!-- Background -->
+        <div class="dblock">
+          <h4>✦ Background</h4>
+          <div class="bggrid" id="bgPicker"></div>
+        </div>
+
+        <!-- Card style -->
+        <div class="dblock">
+          <h4>🃏 Card Style</h4>
+          <label class="albl">Corner Radius</label>
+          <div class="srow" style="margin-bottom:12px;"><input type="range" min="0" max="24" id="cardRadius" oninput="liveRadius(this.value)"><span class="sval" id="cardRadiusVal">10px</span></div>
+          <div class="csgrid" id="cardStylePicker"></div>
+        </div>
+
+        <!-- Layout -->
+        <div class="dblock">
+          <h4>⚏ Grid Columns</h4>
+          <div class="logrid" id="layoutPicker"></div>
+        </div>
+
+        <!-- Header style -->
+        <div class="dblock">
+          <h4>🏠 Header Style</h4>
+          <div class="hsgrid" id="headerStylePicker"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ CONTENT ════ -->
+    <div id="tab-content" class="asec" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Site Titles</h3>
+      <div class="arow"><input id="titleEdit" placeholder="Site Title"><input id="taglineEdit" placeholder="Tagline"><button onclick="applyTitles()">Apply</button></div>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">About Us</h3>
+      <textarea id="aboutEdit" rows="5" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #444;padding:8px;border-radius:6px;font-size:14px;"></textarea>
+      <button onclick="saveAbout()" style="padding:7px 16px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;margin-top:6px;">Save</button>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);margin-top:18px;">Footer Snippet</h3>
+      <div class="arow"><input id="footerSnippetEdit" placeholder="Short tagline for footer"><button onclick="saveFooterSnippet()">Save</button></div>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Business Hours</h3>
+      <textarea id="hoursEdit" rows="3" style="width:100%;background:#1a1a1a;color:#fff;border:1px solid #444;padding:8px;border-radius:6px;font-size:14px;"></textarea>
+      <button onclick="saveHours()" style="padding:7px 16px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;margin-top:6px;">Save</button>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);margin-top:18px;">Contact Methods</h3>
+      <div id="contactAdminList"></div>
+      <div class="arow" style="margin-top:10px;">
+        <select id="contactType" style="flex:0 0 150px;padding:7px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;">
+          <option value="📞">📞 Phone</option><option value="📧">📧 Email</option>
+          <option value="📸">📸 Instagram</option><option value="📘">📘 Facebook</option>
+          <option value="🐦">🐦 Twitter/X</option><option value="💬">💬 WhatsApp</option>
+          <option value="🌐">🌐 Website</option>
+        </select>
+        <input id="contactValue" placeholder="Value or URL">
+        <input id="contactLabel" placeholder="Label (opt)">
+        <button onclick="addContact()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- ════ SINPE ════ -->
+    <div id="tab-sinpe" class="asec" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">SINPE Móvil Configuration</h3>
+      <p style="color:#aaa;font-size:13px;line-height:1.6;">Enter your SINPE Móvil registered phone number and select your bank. Customers will see a QR code and a tap-to-pay SMS button in their cart that auto-fills the correct SMS format for instant payment.</p>
+
+      <label class="albl" style="margin-bottom:6px;">Your SINPE Móvil Phone Number</label>
+      <div class="arow" style="margin-bottom:18px;">
+        <input id="sinpePhoneInput" placeholder="e.g. 88887777" style="font-size:15px;max-width:220px;">
+        <button onclick="saveSinpePhone()">Save Number</button>
+      </div>
+
+      <label class="albl" style="margin-bottom:10px;">Your Bank</label>
+      <div class="sbgrid" id="sinpeBankPicker"></div>
+
+      <div style="background:#0d1e33;border:1px solid #1e3a5a;border-radius:8px;padding:16px;margin-top:4px;">
+        <strong style="color:var(--accent);">📱 How it works</strong>
+        <p style="font-size:13px;color:#ccc;line-height:1.7;margin:8px 0 0;">
+          When a customer has items in their cart, they see:<br>
+          • A <strong>QR code</strong> they can scan with their phone<br>
+          • A <strong>"Pay via SMS"</strong> button that opens their SMS app pre-filled with:<br>
+          <code style="background:#000;padding:3px 6px;border-radius:3px;font-size:12px;">PASE [amount] [your_number]</code> → sent to your bank's short code<br><br>
+          The SMS format (<code>PASE</code>) is the official SINPE Móvil SMS command accepted by all major Costa Rican banks.<br>
+          <span style="color:#f90;">Daily SMS limit: ₡100,000 (BCCR regulation as of 2025). Higher amounts require the bank's app.</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- ════ SETTINGS ════ -->
+    <div id="tab-settings" class="asec" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Change Admin Password</h3>
+      <div class="agrid">
+        <div><label class="albl">Current Password</label><input type="password" id="currentPass"></div>
+        <div><label class="albl">New Password</label><input type="password" id="newPass"></div>
+        <div><label class="albl">Confirm Password</label><input type="password" id="confirmPass"></div>
+        <div style="display:flex;align-items:flex-end;"><button onclick="changeAdminPassword()" style="width:100%;padding:7px;background:var(--accent);color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;">Update</button></div>
+      </div>
+      <span id="passMsg" style="font-size:13px;margin-top:6px;display:block;"></span>
+    </div>
+
+    <!-- ════ MARKETING ════ -->
+    <div id="tab-marketing" class="asec" style="padding:20px;">
+      <h3 style="color:var(--accent);font-family:var(--font-heading);">Mailing Section Text</h3>
+      <div class="arow"><input id="mailingTitleEdit" placeholder="Section title"><input id="mailingSubEdit" placeholder="Subtitle"><button onclick="saveMailingText()">Save</button></div>
+
+      <h3 style="color:var(--accent);font-family:var(--font-heading);margin-top:18px;">Subscribers (<span id="subCount">0</span>)</h3>
+      <div style="overflow-x:auto;"><table class="itbl" id="subscribersTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAbout()">✕</button>
+    <h2>About Cosmo Comics</h2>
+    <p id="aboutText">Welcome to Cosmo Comics.</p>
+  </div>
+</div>
+
+<!-- Mailing -->
+<section class="mailing-section">
+  <h3 id="mailingTitle">📬 Join the Cosmo Crew</h3>
+  <p id="mailingSubtitle">Subscribe for new arrivals, exclusive deals, and weekly picks.</p>
+  <div class="mailing-form">
+    <input type="text" id="mailingName" placeholder="Your name">
+    <input type="email" id="mailingEmail" placeholder="Your email">
+    <button onclick="subscribeMailingList()">Subscribe</button>
+  </div>
+  <div id="mailingMsg"></div>
+</section>
+
+<footer>
+  <div class="footer-main">
+    <div class="footer-col">
+      <h4>About Us</h4>
+      <p id="footerAboutSnippet">Your universe for Marvel, DC, Manga &amp; collectibles.</p>
+      <button onclick="openAbout()" style="margin-top:8px;background:var(--accent);color:#000;border:none;padding:7px 14px;border-radius:5px;cursor:pointer;font-weight:bold;font-size:13px;">Read More</button>
+    </div>
+    <div class="footer-col"><h4>Contact Us</h4><div id="contactList"></div></div>
+    <div class="footer-col"><h4>Hours &amp; Location</h4><p id="footerHours">Mon–Fri: 9am – 7pm<br>Sat: 10am – 5pm<br>Sun: Closed</p></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Cosmo Comics &nbsp;|&nbsp; <button onclick="openAbout()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;text-decoration:underline;">About Us</button></p>
+    <div style="margin-top:10px;"><button onclick="toggleAdmin()" style="background:var(--accent);color:#000;border:none;padding:10px 18px;border-radius:6px;font-weight:bold;cursor:pointer;">Admin</button></div>
+  </div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   SINPE BANK LIST
+   ══════════════════════════════════════════════════════════ */
+const SINPE_BANKS=[
+  {name:"Banco Nacional", code:"2627", carriers:"Kölbi / Movistar / Claro"},
+  {name:"BCR",            code:"2276", carriers:"Kölbi"},
+  {name:"BAC Credomatic", code:"1222", carriers:"Kölbi / Movistar / Claro"},
+  {name:"Banco Popular",  code:"7000", carriers:"Kölbi"},
+  {name:"Davivienda",     code:"7070", carriers:"Kölbi / Movistar"},
+  {name:"Scotiabank",     code:"7272", carriers:"Kölbi"},
+];
+
+/* ══════════════════════════════════════════════════════════
+   STATE  (localStorage fallback)
+   ══════════════════════════════════════════════════════════ */
+const LS=k=>{try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}};
+const SS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+let categories   =LS("categories")   ||["Marvel","DC","Manga"];
+let products     =LS("products")     ||[
+  {id:"p1",name:"Spider‑Man",issue:"#1", category:"Marvel",price:1200,stock:5,image:"https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=400"},
+  {id:"p2",name:"Batman",    issue:"#50",category:"DC",    price:1500,stock:3,image:"https://images.unsplash.com/photo-1608889175123-8ee362201f81?w=400"}
+];
+let cart         =LS("cart")         ||[];
+let orderCount   =Number(LS("orderCount"))||0;
+let revenue      =Number(LS("revenue"))   ||0;
+let adminPassword=LS("adminPassword")||"cosmo123";
+let contacts     =LS("contacts")     ||[{type:"📞",value:"(+506) 8888-7777",label:""},{type:"📧",value:"info@cosmocomics.cr",label:""}];
+let aboutText    =LS("aboutText")    ||"Welcome to Cosmo Comics — your universe for Marvel, DC, Manga, and collectibles.";
+let footerSnippet=LS("footerSnippet")||"Your universe for Marvel, DC, Manga & collectibles.";
+let businessHours=LS("businessHours")||"Mon–Fri: 9am – 7pm\nSat: 10am – 5pm\nSun: Closed";
+let mailingTitle =LS("mailingTitle") ||"📬 Join the Cosmo Crew";
+let mailingSub   =LS("mailingSub")   ||"Subscribe for new arrivals, exclusive deals, and weekly picks.";
+let subscribers  =LS("subscribers")  ||[];
+let sinpePhone   =LS("sinpePhone")   ||"";
+let sinpeBankCode=LS("sinpeBankCode")||"2627";
+
+let designState=LS("designState")||{
+  colorBg:"#0b2a4a",colorAccent:"#ff7a00",colorCard:"#0f355e",
+  colorText:"#ffffff",colorHeader:"#111111",colorNav:"#1a1a1a",
+  fontHeading:"Bangers",fontBody:"Rajdhani",
+  bgPattern:"bg-dots",cardStyle:"default",cardRadius:10,
+  layoutCols:4,headerStyle:"style-centered",logoSize:220,logoSrc:""
+};
+
+let fbReady=false;
+
+/* ══════════════════════════════════════════════════════════
+   FIREBASE
+   ══════════════════════════════════════════════════════════ */
+window.addEventListener("firebaseReady",async()=>{
+  fbReady=true;
+  document.getElementById("setupBanner").style.display="none";
+  await fbLoad();
+  document.getElementById("loadingOverlay").style.display="none";
+  initUI();
+});
+setTimeout(()=>{ if(!fbReady){document.getElementById("loadingOverlay").style.display="none"; initUI();} },3500);
+
+async function fbLoad(){
+  try{
+    const {doc,getDoc,collection,getDocs}=window._fb, db=window._db;
+    const snap=await getDoc(doc(db,"cosmo","settings"));
+    if(snap.exists()){
+      const d=snap.data();
+      categories=d.categories||categories; adminPassword=d.adminPassword||adminPassword;
+      contacts=d.contacts||contacts; aboutText=d.aboutText||aboutText;
+      footerSnippet=d.footerSnippet||footerSnippet; businessHours=d.businessHours||businessHours;
+      mailingTitle=d.mailingTitle||mailingTitle; mailingSub=d.mailingSub||mailingSub;
+      sinpePhone=d.sinpePhone||sinpePhone; sinpeBankCode=d.sinpeBankCode||sinpeBankCode;
+      orderCount=d.orderCount||orderCount; revenue=d.revenue||revenue;
+      if(d.designState) designState=d.designState;
+    }
+    const pSnap=await getDocs(collection(db,"products"));
+    if(!pSnap.empty){products=[];pSnap.forEach(d=>products.push({id:d.id,...d.data()}));}
+    const sSnap=await getDocs(collection(db,"subscribers"));
+    if(!sSnap.empty){subscribers=[];sSnap.forEach(d=>subscribers.push({id:d.id,...d.data()}));}
+  }catch(e){console.warn("Firebase load:",e);}
+}
+
+async function fbSave(){
+  if(!fbReady) return;
+  try{
+    const {doc,setDoc,collection,addDoc,deleteDoc,getDocs}=window._fb, db=window._db;
+    await setDoc(doc(db,"cosmo","settings"),{
+      categories,adminPassword,contacts,aboutText,footerSnippet,
+      businessHours,mailingTitle,mailingSub,sinpePhone,sinpeBankCode,
+      orderCount,revenue,designState
+    });
+    const pSnap=await getDocs(collection(db,"products"));
+    for(const d of pSnap.docs) await deleteDoc(d.ref);
+    for(const p of products){const {id,...data}=p; await addDoc(collection(db,"products"),data);}
+  }catch(e){console.warn("Firebase save:",e);}
+}
+
+/* ══════════════════════════════════════════════════════════
+   SAVE ALL
+   ══════════════════════════════════════════════════════════ */
+async function saveAll(){
+  SS("categories",categories);SS("products",products);SS("cart",cart);
+  SS("orderCount",orderCount);SS("revenue",revenue);SS("adminPassword",adminPassword);
+  SS("contacts",contacts);SS("aboutText",aboutText);SS("footerSnippet",footerSnippet);
+  SS("businessHours",businessHours);SS("mailingTitle",mailingTitle);SS("mailingSub",mailingSub);
+  SS("subscribers",subscribers);SS("sinpePhone",sinpePhone);SS("sinpeBankCode",sinpeBankCode);
+  SS("designState",designState);
+  await fbSave();
+  const msg=document.getElementById("saveMsg");
+  msg.textContent=fbReady?"✔ Saved to Cloud!":"✔ Saved locally";
+  msg.style.opacity="1"; setTimeout(()=>{msg.style.opacity="0";},2500);
+}
+
+/* ══════════════════════════════════════════════════════════
+   DESIGN
+   ══════════════════════════════════════════════════════════ */
+function applyDesign(ds){
+  const r=document.documentElement.style;
+  r.setProperty("--bg",ds.colorBg);r.setProperty("--accent",ds.colorAccent);
+  r.setProperty("--card",ds.colorCard);r.setProperty("--text",ds.colorText);
+  r.setProperty("--header-bg",ds.colorHeader);r.setProperty("--nav-bg",ds.colorNav);
+  r.setProperty("--font-heading",`'${ds.fontHeading}',cursive`);
+  r.setProperty("--font-body",`'${ds.fontBody}',sans-serif`);
+  r.setProperty("--card-radius",ds.cardRadius+"px");
+  r.setProperty("--layout-cols",ds.layoutCols);
+  document.body.className=ds.bgPattern;
+  document.getElementById("siteHeader").className=ds.headerStyle;
+  document.querySelectorAll(".card").forEach(c=>{
+    c.classList.remove("style-compact","style-large","style-minimal","style-magazine");
+    if(ds.cardStyle!=="default") c.classList.add("style-"+ds.cardStyle);
+  });
+  const logo=document.getElementById("logo");
+  if(ds.logoSrc){logo.src=ds.logoSrc;logo.style.display="block";}else logo.style.display="none";
+  logo.style.maxWidth=ds.logoSize+"px";
+}
+function liveColor(key,val){designState[key]=val;applyDesign(designState);}
+function liveRadius(v){designState.cardRadius=Number(v);document.getElementById("cardRadiusVal").textContent=v+"px";applyDesign(designState);}
+function liveLogoSize(v){designState.logoSize=Number(v);document.getElementById("logoSizeVal").textContent=v+"px";applyDesign(designState);}
+
+/* Design builder helpers */
+const THEMES=[
+  {name:"Cosmic",  bg:"#0b2a4a",accent:"#ff7a00",card:"#0f355e",text:"#ffffff",header:"#111111",nav:"#1a1a1a"},
+  {name:"Night",   bg:"#0a0a0a",accent:"#00d4ff",card:"#111111",text:"#e0e0e0",header:"#050505",nav:"#0d0d0d"},
+  {name:"Neon",    bg:"#120024",accent:"#ff00ff",card:"#1a0033",text:"#ffffff",header:"#0a0015",nav:"#15002a"},
+  {name:"Forest",  bg:"#0d1f0d",accent:"#4caf50",card:"#122212",text:"#e8f5e9",header:"#071007",nav:"#0a180a"},
+  {name:"Gold",    bg:"#1a1200",accent:"#ffd700",card:"#1f1600",text:"#fffde7",header:"#0d0a00",nav:"#151000"},
+  {name:"Crimson", bg:"#1a0000",accent:"#ff1744",card:"#1f0000",text:"#ffffff",header:"#0d0000",nav:"#150000"},
+  {name:"Slate",   bg:"#1e2a3a",accent:"#64b5f6",card:"#243040",text:"#eceff1",header:"#141e2a",nav:"#1a2230"},
+  {name:"Paper",   bg:"#f5f0e8",accent:"#d32f2f",card:"#ede8e0",text:"#1a1a1a",header:"#ffffff",nav:"#f0ebe3"},
+];
+function buildThemes(){
+  const c=document.getElementById("themePresets"); c.innerHTML="";
+  THEMES.forEach((t,i)=>{
+    const el=document.createElement("div"); el.className="tpill";
+    el.innerHTML=`<span class="tdot" style="background:${t.accent}"></span>${t.name}`;
+    el.onclick=()=>{
+      Object.assign(designState,{colorBg:t.bg,colorAccent:t.accent,colorCard:t.card,colorText:t.text,colorHeader:t.header,colorNav:t.nav});
+      syncColorPickers();applyDesign(designState);
+      c.querySelectorAll(".tpill").forEach((x,xi)=>x.classList.toggle("active",xi===i));
+    };
+    c.appendChild(el);
+  });
+}
+
+const HF=[{n:"Bangers",s:"BANGERS"},{n:"Bebas Neue",s:"BEBAS"},{n:"Anton",s:"ANTON"},{n:"Permanent Marker",s:"Marker"},{n:"Orbitron",s:"ORBIT"},{n:"Press Start 2P",s:"8-BIT"},{n:"Cinzel",s:"Cinzel"},{n:"Oswald",s:"OSWALD"}];
+const BF=[{n:"Rajdhani",s:"Rajdhani"},{n:"Roboto Condensed",s:"Roboto"},{n:"Oswald",s:"Oswald"},{n:"Montserrat",s:"Mont"},{n:"Exo 2",s:"Exo 2"},{n:"Chakra Petch",s:"Chakra"},{n:"Playfair Display",s:"Playfair"},{n:"Orbitron",s:"Orbitron"}];
+
+function buildFontPicker(cid,fonts,key){
+  const c=document.getElementById(cid); c.innerHTML="";
+  fonts.forEach(f=>{
+    const el=document.createElement("div"); el.className="fopt";
+    if(designState[key]===f.n) el.classList.add("active");
+    el.innerHTML=`<div class="fp" style="font-family:'${f.n}',cursive;">${f.s}</div><div class="fn">${f.n}</div>`;
+    el.onclick=()=>{designState[key]=f.n;applyDesign(designState);c.querySelectorAll(".fopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");};
+    c.appendChild(el);
+  });
+}
+
+const BG_LIST=[
+  {id:"bg-dots",   label:"Dots",    style:"radial-gradient(#ff7a00 1px,transparent 1px);background-size:10px 10px"},
+  {id:"bg-stripes",label:"Stripes", style:"repeating-linear-gradient(45deg,#1a1a1a,#1a1a1a 5px,#222 5px,#222 10px)"},
+  {id:"bg-grid",   label:"Grid",    style:"linear-gradient(rgba(255,122,0,.3)1px,transparent 1px),linear-gradient(90deg,rgba(255,122,0,.3)1px,transparent 1px);background-size:20px 20px"},
+  {id:"bg-solid",  label:"Solid",   style:"#111"},
+  {id:"bg-gradient",label:"Gradient",style:"linear-gradient(135deg,#0b2a4a,#0d1b2a)"},
+];
+function buildBg(){
+  const c=document.getElementById("bgPicker"); c.innerHTML="";
+  BG_LIST.forEach(b=>{
+    const el=document.createElement("div"); el.className="bgopt";
+    if(designState.bgPattern===b.id) el.classList.add("active");
+    el.style.cssText=`background:${b.style};`;el.textContent=b.label;
+    el.onclick=()=>{designState.bgPattern=b.id;applyDesign(designState);c.querySelectorAll(".bgopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");};
+    c.appendChild(el);
+  });
+}
+
+const CS_LIST=[{id:"default",ico:"🃏",lbl:"Default"},{id:"compact",ico:"🔲",lbl:"Compact"},{id:"large",ico:"🖼️",lbl:"Large"},{id:"minimal",ico:"◻️",lbl:"Minimal"},{id:"magazine",ico:"📰",lbl:"Magazine"}];
+function buildCardStyles(){
+  const c=document.getElementById("cardStylePicker"); c.innerHTML="";
+  CS_LIST.forEach(s=>{
+    const el=document.createElement("div"); el.className="csopt";
+    if(designState.cardStyle===s.id) el.classList.add("active");
+    el.innerHTML=`<span class="ico">${s.ico}</span>${s.lbl}`;
+    el.onclick=()=>{designState.cardStyle=s.id;applyDesign(designState);renderProducts();c.querySelectorAll(".csopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");};
+    c.appendChild(el);
+  });
+}
+
+function svgCols(cols){
+  const W=42,H=30,g=2,p=2,ch=H-p*2,cw=(W-p*2-g*(cols-1))/cols;
+  let r="";for(let i=0;i<cols;i++){const x=p+i*(cw+g);r+=`<rect x="${x}" y="${p}" width="${cw}" height="${ch}" rx="1" fill="#ff7a00" opacity=".7"/>`;}
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${r}</svg>`;
+}
+const LO_LIST=[{c:2},{c:3},{c:4},{c:5},{c:1},{c:6}];
+function buildLayout(){
+  const c=document.getElementById("layoutPicker"); c.innerHTML="";
+  LO_LIST.forEach(l=>{
+    const el=document.createElement("div"); el.className="loopt";
+    if(designState.layoutCols===l.c) el.classList.add("active");
+    el.innerHTML=svgCols(l.c)+`<div style="margin-top:4px;">${l.c} col${l.c>1?"s":""}</div>`;
+    el.onclick=()=>{designState.layoutCols=l.c;document.documentElement.style.setProperty("--layout-cols",l.c);c.querySelectorAll(".loopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");};
+    c.appendChild(el);
+  });
+}
+
+const HS_LIST=[{id:"style-centered",lbl:"Centered"},{id:"style-left",lbl:"Left"},{id:"style-banner",lbl:"Banner"},{id:"style-minimal",lbl:"Minimal"},{id:"style-split",lbl:"Split"}];
+function buildHeaderStyles(){
+  const c=document.getElementById("headerStylePicker"); c.innerHTML="";
+  HS_LIST.forEach(s=>{
+    const el=document.createElement("div"); el.className="hsopt";
+    if(designState.headerStyle===s.id) el.classList.add("active");
+    el.textContent=s.lbl;
+    el.onclick=()=>{designState.headerStyle=s.id;applyDesign(designState);c.querySelectorAll(".hsopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");};
+    c.appendChild(el);
+  });
+}
+
+function syncColorPickers(){
+  document.getElementById("cBg").value   =designState.colorBg;
+  document.getElementById("cAccent").value=designState.colorAccent;
+  document.getElementById("cCard").value =designState.colorCard;
+  document.getElementById("cText").value =designState.colorText;
+  document.getElementById("cHeader").value=designState.colorHeader;
+  document.getElementById("cNav").value  =designState.colorNav;
+}
+
+function uploadLogo(inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{designState.logoSrc=e.target.result;document.getElementById("logoPreview").src=e.target.result;applyDesign(designState);};
+  r.readAsDataURL(f);
+}
+function removeLogo(){designState.logoSrc="";document.getElementById("logoPreview").src="https://via.placeholder.com/150x55/ff7a00/000000?text=COSMO";applyDesign(designState);}
+
+/* ══════════════════════════════════════════════════════════
+   SINPE
+   ══════════════════════════════════════════════════════════ */
+function buildSinpeBankPicker(){
+  const c=document.getElementById("sinpeBankPicker"); if(!c) return; c.innerHTML="";
+  SINPE_BANKS.forEach(b=>{
+    const el=document.createElement("div"); el.className="sbopt";
+    if(sinpeBankCode===b.code) el.classList.add("active");
+    el.innerHTML=`<strong>${b.name}</strong><br><span style="font-size:10px;color:#777;">SMS: ${b.code} · ${b.carriers}</span>`;
+    el.onclick=()=>{sinpeBankCode=b.code;SS("sinpeBankCode",sinpeBankCode);c.querySelectorAll(".sbopt").forEach(o=>o.classList.remove("active"));el.classList.add("active");updateSinpeUI(cartTotal);};
+    c.appendChild(el);
+  });
+}
+
+function saveSinpePhone(){
+  const v=document.getElementById("sinpePhoneInput").value.trim().replace(/\D/g,"");
+  if(!v||v.length<8){alert("Enter a valid 8-digit SINPE phone number.");return;}
+  sinpePhone=v; SS("sinpePhone",v);
+  alert("Saved: "+v); updateSinpeUI(cartTotal);
+}
+
+function updateSinpeUI(amount){
+  const sec=document.getElementById("sinpeSection");
+  if(!sinpePhone||amount<=0){sec.style.display="none";return;}
+  sec.style.display="block";
+  document.getElementById("sinpePhone").textContent="📱 "+sinpePhone;
+
+  // Official SINPE Móvil SMS command: PASE [monto] [numero_destino]
+  // Sent to the bank's SMS short code (varies by bank)
+  const body=`PASE ${amount} ${sinpePhone}`;
+  const href=`sms:${sinpeBankCode}?body=${encodeURIComponent(body)}`;
+  document.getElementById("sinpeSmsLink").href=href;
+
+  const qr=document.getElementById("sinpeQRCode");
+  qr.innerHTML="";
+  new QRCode(qr,{text:href,width:170,height:170});
+}
+
+/* ══════════════════════════════════════════════════════════
+   NAV & PRODUCTS
+   ══════════════════════════════════════════════════════════ */
+function renderNav(){
+  const nav=document.getElementById("navMenu");
+  nav.innerHTML='<button onclick="filterCategory(\'all\')">All</button>';
+  categories.forEach(cat=>{const b=document.createElement("button");b.textContent=cat;b.onclick=()=>filterCategory(cat);nav.appendChild(b);});
+}
+function renderProducts(list=products){
+  const g=document.getElementById("productGrid"); g.innerHTML="";
+  list.forEach((p,i)=>{
+    const card=document.createElement("div"); card.className="card";
+    if(designState.cardStyle!=="default") card.classList.add("style-"+designState.cardStyle);
+    card.innerHTML=`<img src="${p.image||''}" alt="${p.name}"><h3>${p.name}</h3><div>Issue ${p.issue}</div><div class="price">₡${p.price}</div><div class="stock">Stock: ${p.stock}</div><button class="buy" onclick="addToCart(${i})">Add to Cart</button>`;
+    g.appendChild(card);
+  });
+}
+function filterCategory(cat){renderProducts(cat==="all"?products:products.filter(p=>p.category===cat));}
+
+/* ══════════════════════════════════════════════════════════
+   CART
+   ══════════════════════════════════════════════════════════ */
+let cartTotal=0;
+function addToCart(i){
+  const p=products[i]; if(p.stock<=0){alert("Out of stock");return;}
+  let item=cart.find(c=>c.index===i);
+  if(item){item.qty++;}else{cart.push({index:i,qty:1});}
+  p.stock--;updateCartUI();renderProducts();SS("cart",cart);
+}
+function updateCartUI(){
+  const ul=document.getElementById("cart-items"); ul.innerHTML=""; cartTotal=0;
+  cart.forEach((c,ci)=>{
+    const p=products[c.index]; const lt=p.price*c.qty; cartTotal+=lt;
+    const li=document.createElement("li");
+    li.innerHTML=`${p.name} ${p.issue}<br>Qty:<button onclick="changeQty(${ci},-1)">-</button>${c.qty}<button onclick="changeQty(${ci},1)">+</button><br>₡${lt} <button onclick="removeFromCart(${ci})">✕</button><hr>`;
+    ul.appendChild(li);
+  });
+  document.getElementById("total").textContent=cartTotal;
+  updateSinpeUI(cartTotal);
+}
+function changeQty(ci,d){
+  const item=cart[ci],p=products[item.index];
+  if(d===1){if(!p.stock){alert("No more stock");return;}item.qty++;p.stock--;}
+  if(d===-1){item.qty--;p.stock++;if(item.qty<=0)cart.splice(ci,1);}
+  updateCartUI();renderProducts();
+}
+function removeFromCart(ci){products[cart[ci].index].stock+=cart[ci].qty;cart.splice(ci,1);updateCartUI();renderProducts();}
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN
+   ══════════════════════════════════════════════════════════ */
+function toggleAdmin(){const p=document.getElementById("adminPanel");p.style.display=p.style.display==="none"?"block":"none";}
+function switchTab(name,el){
+  document.querySelectorAll(".asec").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".atab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  if(el) el.classList.add("active");
+}
+function loginAdmin(){
+  if(document.getElementById("adminPass").value!==adminPassword){alert("Wrong password");return;}
+  document.getElementById("adminContent").style.display="block";
+  document.getElementById("adminPass").value="";
+  renderAdminSelects();renderInventory();populateFields();
+  buildThemes();
+  buildFontPicker("headingFontPicker",HF,"fontHeading");
+  buildFontPicker("bodyFontPicker",BF,"fontBody");
+  buildBg();buildCardStyles();buildLayout();buildHeaderStyles();buildSinpeBankPicker();
+  syncColorPickers();
+  document.getElementById("cardRadius").value=designState.cardRadius;
+  document.getElementById("cardRadiusVal").textContent=designState.cardRadius+"px";
+  document.getElementById("logoSize").value=designState.logoSize;
+  document.getElementById("logoSizeVal").textContent=designState.logoSize+"px";
+  if(designState.logoSrc) document.getElementById("logoPreview").src=designState.logoSrc;
+}
+function logoutAdmin(){document.getElementById("adminContent").style.display="none";document.getElementById("adminPanel").style.display="none";}
+function renderAdminSelects(){["comicCatSel","removeCatSel"].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML=categories.map(c=>`<option>${c}</option>`).join("");});}
+function renderInventory(){
+  const t=document.getElementById("inventoryTable");
+  let h="<tr><th>Name</th><th>Issue</th><th>Category</th><th>Stock</th><th>Price</th><th>Del</th></tr>";
+  products.forEach((p,i)=>{h+=`<tr><td>${p.name}</td><td>${p.issue}</td><td>${p.category}</td><td>${p.stock}</td><td>₡${p.price}</td><td><button onclick="deleteComic(${i})" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;">✕</button></td></tr>`;});
+  t.innerHTML=h;
+  document.getElementById("ordersCount").textContent=orderCount;
+  document.getElementById("revenueValue").textContent=revenue;
+}
+function addComic(){
+  const file=document.getElementById("comicImage").files[0];
+  const add=img=>{ products.push({id:"p"+Date.now(),name:document.getElementById("comicName").value,issue:document.getElementById("comicIssue").value,category:document.getElementById("comicCatSel").value,price:Number(document.getElementById("comicPrice").value),stock:Number(document.getElementById("comicStock").value),image:img}); renderProducts();renderInventory(); };
+  if(file){const r=new FileReader();r.onload=e=>add(e.target.result);r.readAsDataURL(file);}else add("");
+}
+function deleteComic(i){products.splice(i,1);renderProducts();renderInventory();}
+function adminSearch(q){renderProducts(products.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())));}
+function addCategory(){const c=document.getElementById("newCategory").value.trim();if(c&&!categories.includes(c)){categories.push(c);renderNav();renderAdminSelects();}}
+function removeCategory(){const c=document.getElementById("removeCatSel").value;categories=categories.filter(x=>x!==c);renderNav();renderAdminSelects();}
+function applyTitles(){const t=document.getElementById("titleEdit").value,tg=document.getElementById("taglineEdit").value;if(t)document.getElementById("siteTitle").textContent=t;if(tg)document.getElementById("tagline").textContent=tg;}
+function saveAbout(){const v=document.getElementById("aboutEdit").value.trim();if(!v)return;aboutText=v;document.getElementById("aboutText").textContent=v;}
+function saveFooterSnippet(){const v=document.getElementById("footerSnippetEdit").value.trim();if(!v)return;footerSnippet=v;document.getElementById("footerAboutSnippet").textContent=v;}
+function saveHours(){const v=document.getElementById("hoursEdit").value.trim();if(!v)return;businessHours=v;document.getElementById("footerHours").innerHTML=v.replace(/\n/g,"<br>");}
+function changeAdminPassword(){
+  const c=document.getElementById("currentPass").value,n=document.getElementById("newPass").value,cf=document.getElementById("confirmPass").value,msg=document.getElementById("passMsg");
+  if(c!==adminPassword){msg.style.color="red";msg.textContent="Incorrect.";return;}
+  if(n.length<6){msg.style.color="red";msg.textContent="Min 6 chars.";return;}
+  if(n!==cf){msg.style.color="red";msg.textContent="Don't match.";return;}
+  adminPassword=n;["currentPass","newPass","confirmPass"].forEach(id=>document.getElementById(id).value="");
+  msg.style.color="lightgreen";msg.textContent="Updated!";setTimeout(()=>msg.textContent="",3000);
+}
+function renderContactList(){const el=document.getElementById("contactList");if(!el)return;el.innerHTML="";contacts.forEach(c=>{const d=document.createElement("div");d.className="contact-item";d.innerHTML=`<span>${c.type}</span><a href="#">${c.label||c.value}</a>`;el.appendChild(d);});}
+function renderContactAdmin(){const el=document.getElementById("contactAdminList");if(!el)return;el.innerHTML="";contacts.forEach((c,i)=>{const row=document.createElement("div");row.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;";row.innerHTML=`<span style="font-size:18px;">${c.type}</span><input value="${c.value}" oninput="contacts[${i}].value=this.value" style="flex:1;padding:5px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;"><input value="${c.label}" oninput="contacts[${i}].label=this.value" placeholder="Label" style="flex:1;padding:5px;background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:4px;"><button onclick="deleteContact(${i})" style="background:#dc3545;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;">✕</button>`;el.appendChild(row);});}
+function addContact(){const t=document.getElementById("contactType").value,v=document.getElementById("contactValue").value.trim(),l=document.getElementById("contactLabel").value.trim();if(!v){alert("Enter a value");return;}contacts.push({type:t,value:v,label:l});document.getElementById("contactValue").value="";document.getElementById("contactLabel").value="";renderContactList();renderContactAdmin();}
+function deleteContact(i){contacts.splice(i,1);renderContactList();renderContactAdmin();}
+function saveMailingText(){const t=document.getElementById("mailingTitleEdit").value.trim(),s=document.getElementById("mailingSubEdit").value.trim();if(t){mailingTitle=t;document.getElementById("mailingTitle").textContent=t;}if(s){mailingSub=s;document.getElementById("mailingSubtitle").textContent=s;}}
+function subscribeMailingList(){
+  const n=document.getElementById("mailingName").value.trim(),e=document.getElementById("mailingEmail").value.trim(),msg=document.getElementById("mailingMsg");
+  if(!n||!e){msg.style.color="salmon";msg.textContent="Enter name and email.";return;}
+  if(!/\S+@\S+\.\S+/.test(e)){msg.style.color="salmon";msg.textContent="Invalid email.";return;}
+  if(subscribers.find(s=>s.email===e)){msg.style.color="salmon";msg.textContent="Already subscribed!";return;}
+  const sub={name:n,email:e,date:new Date().toLocaleDateString()};
+  subscribers.push(sub);SS("subscribers",subscribers);
+  if(fbReady){const{collection,addDoc}=window._fb;addDoc(collection(window._db,"subscribers"),sub).catch(()=>{});}
+  document.getElementById("mailingName").value="";document.getElementById("mailingEmail").value="";
+  msg.style.color="lightgreen";msg.textContent=`🎉 Welcome, ${n}!`;setTimeout(()=>msg.textContent="",4000);
+  renderSubscribersTable();
+}
+function renderSubscribersTable(){
+  const el=document.getElementById("subscribersTable");if(!el)return;
+  document.getElementById("subCount").textContent=subscribers.length;
+  let h="<tr><th>#</th><th>Name</th><th>Email</th><th>Date</th><th>Remove</th></tr>";
+  if(!subscribers.length)h+="<tr><td colspan='5' style='text-align:center;color:#888;'>No subscribers yet.</td></tr>";
+  subscribers.forEach((s,i)=>{h+=`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.email}</td><td>${s.date}</td><td><button onclick="removeSubscriber(${i})" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;">✕</button></td></tr>`;});
+  el.innerHTML=h;
+}
+function removeSubscriber(i){subscribers.splice(i,1);renderSubscribersTable();SS("subscribers",subscribers);}
+function openAbout(){document.getElementById("aboutModal").classList.add("open");}
+function closeAbout(){document.getElementById("aboutModal").classList.remove("open");}
+function populateFields(){
+  document.getElementById("aboutEdit").value=aboutText;
+  document.getElementById("footerSnippetEdit").value=footerSnippet;
+  document.getElementById("hoursEdit").value=businessHours;
+  document.getElementById("mailingTitleEdit").value=mailingTitle;
+  document.getElementById("mailingSubEdit").value=mailingSub;
+  document.getElementById("sinpePhoneInput").value=sinpePhone;
+  renderContactAdmin();renderSubscribersTable();
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════════ */
+function initUI(){
+  applyDesign(designState);renderNav();renderProducts();updateCartUI();renderContactList();
+  document.getElementById("aboutText").textContent=aboutText;
+  document.getElementById("footerAboutSnippet").textContent=footerSnippet;
+  document.getElementById("footerHours").innerHTML=businessHours.replace(/\n/g,"<br>");
+  document.getElementById("mailingTitle").textContent=mailingTitle;
+  document.getElementById("mailingSubtitle").textContent=mailingSub;
+}
+
+// Ctrl+Shift+A = toggle admin
+window.addEventListener("keydown",e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==="a"){const p=document.getElementById("adminPanel");p.style.display=(p.style.display==="none"||!p.style.display)?"block":"none";window.scrollTo({top:p.offsetTop,behavior:"smooth"});}});
+</script>
+</body>
+</html>
